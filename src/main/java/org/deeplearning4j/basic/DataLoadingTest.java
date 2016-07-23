@@ -30,6 +30,9 @@ public class DataLoadingTest {
 
     public static Logger log = LoggerFactory.getLogger(DataLoadingTest.class);
 
+    @Parameter(names = "-useSparkLocal", description = "Whether to use spark local (if false: use spark submit)", arity = 1)
+    protected boolean useSparkLocal = false;
+
     @Parameter(names="-numTestFiles", description = "Number of test files (DataSet objects)")
     protected int numTestFiles = 10000;
 
@@ -60,6 +63,7 @@ public class DataLoadingTest {
 
         SparkConf conf = new SparkConf();
         conf.setAppName("DataLoadingTest");
+        if(useSparkLocal) conf.setMaster("local[*]");
         JavaSparkContext sc = new JavaSparkContext(conf);
 
         Configuration config = new Configuration();
@@ -145,9 +149,9 @@ public class DataLoadingTest {
         long endProcessList = System.currentTimeMillis();
 
         StringBuilder sb = new StringBuilder();
-        sb.append("Launch param -numTestFiles = ").append(numTestFiles).append("\n");
-        sb.append("Launch param -tempPath = ").append(tempPath).append("\n");
-        sb.append("Launch param -resultPath = ").append(resultPath).append("\n");
+        sb.append("-numTestFiles = ").append(numTestFiles).append("\n");
+        sb.append("-tempPath = ").append(tempPath).append("\n");
+        sb.append("-resultPath = ").append(resultPath).append("\n");
         sb.append("Default parallelism: ").append(sc.defaultParallelism());
         sb.append("Parallelize time: ").append(endParallelize-startParallelize).append("\n");
         sb.append("Count + create DataSet times: ").append(endCount - startCount).append("\n");

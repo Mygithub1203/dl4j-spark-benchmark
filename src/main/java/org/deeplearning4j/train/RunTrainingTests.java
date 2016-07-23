@@ -21,6 +21,7 @@ import org.deeplearning4j.spark.impl.paramavg.ParameterAveragingTrainingMaster;
 import org.deeplearning4j.spark.stats.StatsUtils;
 import org.deeplearning4j.spark.util.SparkUtils;
 import org.deeplearning4j.train.config.MLPTest;
+import org.deeplearning4j.train.config.RNNTest;
 import org.deeplearning4j.train.config.SparkTest;
 import org.deeplearning4j.train.functions.GenerateDataFunction;
 import org.nd4j.linalg.dataset.DataSet;
@@ -34,10 +35,16 @@ import java.util.List;
  * Created by Alex on 23/07/2016.
  */
 @Slf4j
-public class RunMLPTrainingTests {
+public class RunTrainingTests {
 
     @Parameter(names = "-useSparkLocal", description = "Whether to use spark local (if false: use spark submit)", arity = 1)
     protected boolean useSparkLocal = false;
+
+    @Parameter(names = "-testType", description = "Type of test to run. One of: MLP, RNN, CNN")
+    protected String testType = TestType.MLP.name();
+
+    @Parameter(names = "-dataLoadingMethods", description = "List of data loading methods to test", variableArity = true)
+    protected List<String> dataLoadingMethods = new ArrayList<>(Arrays.asList(DataLoadingMethod.SparkBinaryFiles.name(), DataLoadingMethod.Parallelize.name()));
 
     @Parameter(names = "-numTestFiles", description = "Number of test files (DataSet objects)")
     protected int numTestFiles = 2000;
@@ -57,6 +64,9 @@ public class RunMLPTrainingTests {
     @Parameter(names = "-dataSize", variableArity = true, description = "Size of the data set (i.e., num inputs/outputs)")
     protected List<Integer> dataSize = new ArrayList<>(Arrays.asList(16, 128, 512, 2048));
 
+    @Parameter(names = "-cnnImageWidth", variableArity = true, description = "Width (and, height) the image data set")
+    protected List<Integer> cnnImageWidth = new ArrayList<>(Arrays.asList(32, 128, 256));
+
     @Parameter(names = "-miniBatchSizePerWorker", variableArity = true, description = "Number of examples per worker/minibatch, as a list: \"-miniBatchSizePerWorker 8 32 128\"")
     protected List<Integer> miniBatchSizePerWorker = new ArrayList<>(Arrays.asList(8, 32, 128));
 
@@ -72,12 +82,13 @@ public class RunMLPTrainingTests {
     @Parameter(names = "-workerPrefetchNumBatches", description = "Number of batches to prefetch")
     protected int workerPrefetchNumBatches = 0;
 
-    @Parameter(names = "-dataLoadingMethods", description = "List of data loading methods to test", variableArity = true)
-    protected List<String> dataLoadingMethods = new ArrayList<>(Arrays.asList(DataLoadingMethod.SparkBinaryFiles.name(), DataLoadingMethod.Parallelize.name()));
+    @Parameter(names = "-rnnTimeSeriesLength", description = "Data length (number of time steps) for RNN data")
+    protected int rnnTimeSeriesLength = 100;
 
+    @Parameter
 
     public static void main(String[] args) throws Exception {
-        new RunMLPTrainingTests().entryPoint(args);
+        new RunTrainingTests().entryPoint(args);
     }
 
     protected void entryPoint(String[] args) throws Exception {
@@ -95,7 +106,7 @@ public class RunMLPTrainingTests {
         }
 
         SparkConf conf = new SparkConf();
-        conf.setAppName("RunMLPTrainingTests");
+        conf.setAppName("RunTrainingTests");
         if(useSparkLocal) conf.setMaster("local[*]");
         JavaSparkContext sc = new JavaSparkContext(conf);
 
@@ -105,17 +116,39 @@ public class RunMLPTrainingTests {
                 for (Integer mbs : miniBatchSizePerWorker) {
                     for (String dataLoadingMethod : dataLoadingMethods) {
 
-                        testsToRun.add(
-                                new MLPTest.Builder()
-                                        .paramsSize(np)
-                                        .dataSize(ds)
-                                        .dataLoadingMethod(DataLoadingMethod.valueOf(dataLoadingMethod))
-                                        .minibatchSizePerWorker(mbs)
-                                        .saveUpdater(saveUpdater)
-                                        .repartition(repartition)
-                                        .repartitionStrategy(repartitionStrategy)
-                                        .workerPrefetchNumBatches(workerPrefetchNumBatches)
-                                        .build());
+                        switch(TestType.valueOf(testType)){
+                            case MLP:
+                                testsToRun.add(
+                                        new MLPTest.Builder()
+                                                .paramsSize(np)
+                                                .dataSize(ds)
+                                                .dataLoadingMethod(DataLoadingMethod.valueOf(dataLoadingMethod))
+                                                .minibatchSizePerWorker(mbs)
+                                                .saveUpdater(saveUpdater)
+                                                .repartition(repartition)
+                                                .repartitionStrategy(repartitionStrategy)
+                                                .workerPrefetchNumBatches(workerPrefetchNumBatches)
+                                                .build());
+                                break;
+                            case RNN:
+                                testsToRun.add(
+                                        new RNNTest.Builder()
+                                                .paramsSize(np)
+                                                .dataSize(ds)
+                                                .dataLoadingMethod(DataLoadingMethod.valueOf(dataLoadingMethod))
+                                                .minibatchSizePerWorker(mbs)
+                                                .saveUpdater(saveUpdater)
+                                                .repartition(repartition)
+                                                .repartitionStrategy(repartitionStrategy)
+                                                .workerPrefetchNumBatches(workerPrefetchNumBatches)
+                                                .timeSeriesLength(rnnTimeSeriesLength)
+                                                .build());
+                                break;
+                            case CNN:
+                                throw new UnsupportedOperationException("CNN tests not yet implemented");
+                            default:
+                                throw new RuntimeException("Unknown test type: " + testType);
+                        }
                     }
                 }
             }
@@ -125,7 +158,7 @@ public class RunMLPTrainingTests {
         JavaRDD<Integer> intRDD = sc.parallelize(intList);
 
         Configuration config = new Configuration();
-        FileSystem hdfs = FileSystem.get(URI.create(tempPath), config);
+        FileSystem fileSystem = FileSystem.get(URI.create(tempPath), config);
 
         int test = 0;
         for (SparkTest sparkTest : testsToRun) {
@@ -133,14 +166,14 @@ public class RunMLPTrainingTests {
 
             String dataDir = tempPath + (tempPath.endsWith("/") ? "" : "/") + test + "/";
 
-            boolean exists = hdfs.exists(new Path(tempPath));
+            boolean exists = fileSystem.exists(new Path(tempPath));
             if (exists) {
                 if (skipExisting) {
                     log.info("Temporary directory exists; skipping test. {}", tempPath);
                     continue;
                 }
                 log.info("Temporary directory exists; attempting to delete. {}", tempPath);
-                hdfs.delete(new Path(tempPath), true);
+                fileSystem.delete(new Path(tempPath), true);
             }
 
 
@@ -221,7 +254,7 @@ public class RunMLPTrainingTests {
             //Finally: where necessary, delete the temporary data
             if(sparkTest.getDataLoadingMethod() == DataLoadingMethod.SparkBinaryFiles ){
                 log.info("Deleting temporary files at path: {}", tempPath);
-                hdfs.delete(new Path(tempPath), true);
+                fileSystem.delete(new Path(tempPath), true);
             }
 
             test++;
