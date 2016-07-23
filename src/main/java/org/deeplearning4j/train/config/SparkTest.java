@@ -41,7 +41,7 @@ public interface SparkTest extends Serializable {
 
     int getAveragingFrequency();
 
-    DataLoadingMethod getDataLoadingStrategy();
+    DataLoadingMethod getDataLoadingMethod();
 
     String toJson();
 
