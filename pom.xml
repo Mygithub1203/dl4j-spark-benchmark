@@ -27,7 +27,31 @@
         <jcommander.version>1.27</jcommander.version>
     </properties>
 
+    <profiles>
+        <!-- Default profile - provided scope for spark: "-P sparksubmit" -->
+        <profile>
+            <id>sparksubmit</id>
+            <properties>
+                <spark.scope>provided</spark.scope>
+            </properties>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+        </profile>
+
+        <!-- For building jar for running Spark local: "-P sparklocal"-->
+        <profile>
+            <id>sparklocal</id>
+            <properties>
+                <spark.scope>compile</spark.scope>
+            </properties>
+        </profile>
+
+    </profiles>
+
     <build>
+        <finalName>dl4j-spark-benchmark</finalName>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -37,6 +61,17 @@
                     <target>1.7</target>
                 </configuration>
             </plugin>
+
+            <!-- Specify output directory for the JAR -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.0.0</version>
+                <configuration>
+                    <outputDirectory>${basedir}</outputDirectory>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -62,6 +97,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <minimizeJar>true</minimizeJar>
                             <transformers>
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
@@ -79,6 +115,8 @@
             </plugin>
         </plugins>
     </build>
+
+
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -112,11 +150,14 @@
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-mllib_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
+            <scope>${spark.scope}</scope>
         </dependency>
+
         <dependency>
             <groupId>org.scala-lang</groupId>
             <artifactId>scala-library</artifactId>
             <version>${scala.version}</version>
+            <scope>${spark.scope}</scope>
         </dependency>
 
         <dependency>
@@ -146,6 +187,7 @@
                     <artifactId>servlet-api</artifactId>
                 </exclusion>
             </exclusions>
+            <scope>${spark.scope}</scope>
         </dependency>
 
 

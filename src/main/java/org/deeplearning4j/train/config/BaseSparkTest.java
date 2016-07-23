@@ -30,7 +30,7 @@ public abstract class BaseSparkTest implements SparkTest {
     protected RepartitionStrategy repartitionStrategy;
     protected int workerPrefetchNumBatches;
     protected int averagingFrequency;
-    protected DataLoadingMethod dataLoadingStrategy;
+    protected DataLoadingMethod dataLoadingMethod;
 
 
     protected BaseSparkTest(Builder builder){
