@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.datatype.joda.JodaModule;
 import lombok.Data;
+import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.spark.api.Repartition;
 import org.deeplearning4j.spark.api.RepartitionStrategy;
 import org.deeplearning4j.train.DataLoadingMethod;
@@ -42,7 +43,11 @@ public abstract class BaseSparkTest implements SparkTest {
         this.repartitionStrategy = builder.repartitionStrategy;
         this.workerPrefetchNumBatches = builder.workerPrefetchNumBatches;
         this.averagingFrequency = builder.averagingFrequency;
+    }
 
+    @Override
+    public int getNumParams(){
+        return new MultiLayerNetwork(getConfiguration()).numParams();
     }
 
     @Override
