@@ -276,7 +276,10 @@ public class RunTrainingTests {
             sb.append("Data generate/export time: ").append(endGenerateExport - startGenerateExport).append("\n");
             sb.append("Fit time: ").append(endFit - startFit).append("\n");
             sb.append("Spark default parallelism: ").append(sc.defaultParallelism()).append("\n");
-            sb.append("Actual # parameters: ").append(sparkTest.getNumParams()).append("\n");
+            int nParamsActual = sparkTest.getNumParams();
+            sb.append("Actual # parameters: ").append(nParamsActual).append("\n");
+            double paramsSizeMB = 4 * nParamsActual / (1024.0 * 1024.0); //Float: 4 bytes per element
+            sb.append("Parameters size (MB): ").append(String.format("%.3f",paramsSizeMB)).append("\n");
             DataSet dsTemp = sparkTest.getSyntheticDataSet();
             int dataSetSizeNumElements = dsTemp.getFeatureMatrix().length() + dsTemp.getLabels().length();
             if(dsTemp.getFeaturesMaskArray() != null) dataSetSizeNumElements += dsTemp.getFeaturesMaskArray().length();
