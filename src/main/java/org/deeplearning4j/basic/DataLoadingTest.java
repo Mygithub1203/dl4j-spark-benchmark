@@ -79,7 +79,7 @@ public class DataLoadingTest {
         JavaSparkContext sc = new JavaSparkContext(conf);
 
         //Write launch args to file:
-        org.datavec.spark.transform.utils.SparkUtils.writeStringToFile(launchArgsPath,lp.toString(),sc);  //Write a copy of  the launch arguments to file
+        SparkUtils.writeStringToFile(launchArgsPath,lp.toString(),sc);  //Write a copy of  the launch arguments to file
 
         Configuration config = new Configuration();
 //        conf.set("fs.hdfs.impl",org.apache.hadoop.hdfs.DistributedFileSystem.class.getName());
@@ -183,7 +183,7 @@ public class DataLoadingTest {
         String filename = "DataLoadingTest_" + System.currentTimeMillis() + "_results.txt";
         String outPath = resultPath + (resultPath.endsWith("/") ? "" : "/" ) + filename;
 
-        SparkUtils.writeStringToFile(str, outPath, sc);
+        SparkUtils.writeStringToFile(outPath, str, sc);
 
         sc.stop();
         Thread.sleep(4000);
