@@ -1,6 +1,7 @@
 package org.deeplearning4j.train.config;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -20,6 +21,7 @@ import java.util.Random;
  * Created by Alex on 23/07/2016.
  */
 @Data
+@JsonIgnoreProperties({"rng"})
 public abstract class BaseSparkTest implements SparkTest {
 
     protected int minibatchSizePerWorker;
@@ -43,6 +45,7 @@ public abstract class BaseSparkTest implements SparkTest {
         this.repartitionStrategy = builder.repartitionStrategy;
         this.workerPrefetchNumBatches = builder.workerPrefetchNumBatches;
         this.averagingFrequency = builder.averagingFrequency;
+        this.dataLoadingMethod = builder.dataLoadingMethod;
     }
 
     @Override

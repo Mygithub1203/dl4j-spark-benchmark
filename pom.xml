@@ -33,9 +33,9 @@
             <properties>
                 <spark.scope>provided</spark.scope>
             </properties>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
+            <!--<activation>-->
+                <!--<activeByDefault>true</activeByDefault>-->
+            <!--</activation>-->
         </profile>
 
         <!-- For building jar for running Spark local: "-P sparklocal"-->
@@ -44,6 +44,9 @@
             <properties>
                 <spark.scope>compile</spark.scope>
             </properties>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
         </profile>
 
     </profiles>

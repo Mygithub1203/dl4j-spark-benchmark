@@ -24,6 +24,7 @@ import org.deeplearning4j.train.config.MLPTest;
 import org.deeplearning4j.train.config.RNNTest;
 import org.deeplearning4j.train.config.SparkTest;
 import org.deeplearning4j.train.functions.GenerateDataFunction;
+import org.deeplearning4j.train.misc.EnumConverters;
 import org.nd4j.linalg.dataset.DataSet;
 
 import java.net.URI;
@@ -73,10 +74,10 @@ public class RunTrainingTests {
     @Parameter(names = "-saveUpdater", description = "Whether the updater should be saved or not", arity = 1)
     protected boolean saveUpdater = true;
 
-    @Parameter(names = "-repartition", description = "When repartitioning should occur")
+    @Parameter(names = "-repartition", description = "When repartitioning should occur", converter = EnumConverters.RepartitionEnumConverter.class)
     protected Repartition repartition = Repartition.Always;
 
-    @Parameter(names = "-repartitionStrategy", description = "Repartition strategy to use when repartitioning")
+    @Parameter(names = "-repartitionStrategy", description = "Repartition strategy to use when repartitioning", converter = EnumConverters.RepartitionStrategyEnumConverter.class)
     protected RepartitionStrategy repartitionStrategy = RepartitionStrategy.SparkDefault;
 
     @Parameter(names = "-workerPrefetchNumBatches", description = "Number of batches to prefetch")
@@ -109,7 +110,7 @@ public class RunTrainingTests {
             throw e;
         }
 
-        String launchArgsPath = resultPath + (resultPath.endsWith("/") ? "" : "/") + System.currentTimeMillis() + "_launchConf.txt";
+        String launchArgsPath = resultPath + (resultPath.endsWith("/") ? "" : "/") + System.currentTimeMillis() + "_" + testType + "_launchConf.txt";
         //Log the launch configuration
         String f = "%-40s\t%s\n";
         StringBuilder lp = new StringBuilder();
@@ -188,6 +189,7 @@ public class RunTrainingTests {
         }
 
         List<Integer> intList = new ArrayList<>();
+        for( int i=0; i<numTestFiles; i++ ) intList.add(i);
         JavaRDD<Integer> intRDD = sc.parallelize(intList);
 
         Configuration config = new Configuration();
@@ -209,12 +211,14 @@ public class RunTrainingTests {
                 fileSystem.delete(new Path(tempPath), true);
             }
 
+            //Step 0: export test
 
             //Step 1: generate data
             long startGenerateExport = System.currentTimeMillis();
             JavaRDD<DataSet> trainData = null;
             switch (sparkTest.getDataLoadingMethod()) {
                 case SparkBinaryFiles:
+                    log.info("Generating/exporting data at directory: {}", dataDir);
                     JavaRDD<DataSet> data = intRDD.map(new GenerateDataFunction(sparkTest));
                     data.foreachPartition(new DataSetExportFunction(new URI(dataDir)));
                     break;
@@ -265,6 +269,7 @@ public class RunTrainingTests {
 
             String yamlConf = sparkTest.toYaml();
             String yamlPath = baseTestOutputDir + "testConfig.yml";
+            SparkUtils.writeStringToFile(yamlPath, yamlConf, sc);
 
             StringBuilder sb = new StringBuilder();
             sb.append("Data generate/export time: ").append(endGenerateExport - startGenerateExport).append("\n");

@@ -43,7 +43,7 @@ public class MLPTest extends BaseSparkTest {
                 .layer(0, new DenseLayer.Builder().nIn(dataSize).nOut(layerSize).build())
                 .layer(1, new DenseLayer.Builder().nIn(layerSize).nOut(layerSize).build())
                 .layer(2, new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT).activation("softmax")
-                        .nIn(paramsSize).nOut(dataSize).build())
+                        .nIn(layerSize).nOut(dataSize).build())
                 .pretrain(false).backprop(true)
                 .build();
 
