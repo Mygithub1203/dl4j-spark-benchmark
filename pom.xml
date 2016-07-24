@@ -19,8 +19,7 @@
         <!--<nd4j.version>0.4.0</nd4j.version>-->
         <!--<dl4j.version>0.4.0</dl4j.version>-->
         <scala.version>2.11.6</scala.version>
-        <!--<scala.binary.version>2.11</scala.binary.version>-->
-        <scala.binary.version>2.10</scala.binary.version>
+        <scala.binary.version>2.11</scala.binary.version>
         <!--<scala.version>2.10.6</scala.version>-->
         <!--<scala.binary.version>2.10</scala.binary.version>-->
         <spark.version>1.5.0</spark.version>
@@ -97,7 +96,7 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <minimizeJar>true</minimizeJar>
+                            <!--<minimizeJar>true</minimizeJar>-->
                             <transformers>
                                 <transformer
                                         implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
@@ -145,6 +144,18 @@
 
 
     <dependencies>
+
+        <!--<dependency>-->
+            <!--<groupId>org.slf4j</groupId>-->
+            <!--<artifactId>log4j-over-slf4j</artifactId>-->
+            <!--<version>1.7.21</version>-->
+        <!--</dependency>-->
+
+        <!--<dependency>-->
+            <!--<groupId>org.slf4j</groupId>-->
+            <!--<artifactId>slf4j-log4j12</artifactId>-->
+            <!--<version>1.7.21</version>-->
+        <!--</dependency>-->
 
         <dependency>
             <groupId>org.apache.spark</groupId>

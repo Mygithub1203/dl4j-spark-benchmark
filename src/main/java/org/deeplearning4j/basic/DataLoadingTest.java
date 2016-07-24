@@ -61,10 +61,25 @@ public class DataLoadingTest {
             throw e;
         }
 
+        String launchArgsPath = resultPath + (resultPath.endsWith("/") ? "" : "/") + System.currentTimeMillis() + "_launchConf.txt";
+        //Log the launch configuration
+        String f = "%-40s\t%s\n";
+        StringBuilder lp = new StringBuilder();
+        lp.append("Launching job with args:\n");
+        lp.append(String.format(f,"launchArgsPath",launchArgsPath));
+        lp.append(String.format(f,"useSparkLocal",useSparkLocal));
+        lp.append(String.format(f,"numTestFiles",numTestFiles));
+        lp.append(String.format(f,"tempPath",tempPath));
+        lp.append(String.format(f,"resultPath",resultPath));
+        log.info(lp.toString());
+
         SparkConf conf = new SparkConf();
         conf.setAppName("DataLoadingTest");
         if(useSparkLocal) conf.setMaster("local[*]");
         JavaSparkContext sc = new JavaSparkContext(conf);
+
+        //Write launch args to file:
+        org.datavec.spark.transform.utils.SparkUtils.writeStringToFile(launchArgsPath,lp.toString(),sc);  //Write a copy of  the launch arguments to file
 
         Configuration config = new Configuration();
 //        conf.set("fs.hdfs.impl",org.apache.hadoop.hdfs.DistributedFileSystem.class.getName());

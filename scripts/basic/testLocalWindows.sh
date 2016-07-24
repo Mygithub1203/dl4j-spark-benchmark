@@ -1,2 +1,0 @@
-JARARGS="-tempPath file:/C:/Temp/DataLoadTest/Temp/ -resultPath file:/C:/Temp/DataLoadTest/Data/ -useSparkLocal true"
-java -Xms16G -Xmx16G -cp dl4j-spark-benchmark.jar org.deeplearning4j.basic.DataLoadingTest $JARARGS

@@ -85,7 +85,11 @@ public class RunTrainingTests {
     @Parameter(names = "-rnnTimeSeriesLength", description = "Data length (number of time steps) for RNN data")
     protected int rnnTimeSeriesLength = 100;
 
-    @Parameter
+    @Parameter(names = "-rnnUseTBPTT", description = "Whether to use truncated BPTT for RNNs")
+    protected boolean rnnUseTBPTT = false;
+
+    @Parameter(names = "-rnnTBPTTLength", description = "Length to use for truncated BPTT")
+    protected int rnnTBPTTLength = 100;
 
     public static void main(String[] args) throws Exception {
         new RunTrainingTests().entryPoint(args);
@@ -105,10 +109,39 @@ public class RunTrainingTests {
             throw e;
         }
 
+        String launchArgsPath = resultPath + (resultPath.endsWith("/") ? "" : "/") + System.currentTimeMillis() + "_launchConf.txt";
+        //Log the launch configuration
+        String f = "%-40s\t%s\n";
+        StringBuilder lp = new StringBuilder();
+        lp.append("Launching job with args:\n");
+        lp.append(String.format(f,"launchArgsPath",launchArgsPath));
+        lp.append(String.format(f,"useSparkLocal",useSparkLocal));
+        lp.append(String.format(f,"testType",testType));
+        lp.append(String.format(f,"dataLoadingMethods",dataLoadingMethods));
+        lp.append(String.format(f,"numTestFiles",numTestFiles));
+        lp.append(String.format(f,"tempPath",tempPath));
+        lp.append(String.format(f,"resultPath",resultPath));
+        lp.append(String.format(f,"skipExisting",skipExisting));
+        lp.append(String.format(f,"numParams",numParams));
+        lp.append(String.format(f,"dataSize",dataSize));
+        lp.append(String.format(f,"cnnImageSize",cnnImageWidth));
+        lp.append(String.format(f,"miniBatchSizePerWorker",miniBatchSizePerWorker));
+        lp.append(String.format(f,"saveUpdater",saveUpdater));
+        lp.append(String.format(f,"repartition",repartition));
+        lp.append(String.format(f,"repartitionStrategy",repartitionStrategy));
+        lp.append(String.format(f,"workerPrefetchNumBatches",workerPrefetchNumBatches));
+        lp.append(String.format(f,"rnnTimeSeriesLength",rnnTimeSeriesLength));
+        lp.append(String.format(f,"rnnUseTBPTT",rnnUseTBPTT));
+        lp.append(String.format(f,"rnnTBPTTLength",rnnTBPTTLength));
+        log.info(lp.toString());
+
         SparkConf conf = new SparkConf();
         conf.setAppName("RunTrainingTests");
         if(useSparkLocal) conf.setMaster("local[*]");
         JavaSparkContext sc = new JavaSparkContext(conf);
+
+        //Write launch args to file:
+        org.datavec.spark.transform.utils.SparkUtils.writeStringToFile(launchArgsPath,lp.toString(),sc);  //Write a copy of  the launch arguments to file
 
         List<SparkTest> testsToRun = new ArrayList<>();
         for (Integer np : numParams) {
@@ -228,7 +261,7 @@ public class RunTrainingTests {
             //(b) Times
             //(c) Spark stats HTML
             //(d) Spark stats raw data/times
-            String baseTestOutputDir = resultPath + (resultPath.endsWith("/") ? "" : "/") + System.currentTimeMillis() + "_" + test + "/";
+            String baseTestOutputDir = resultPath + (resultPath.endsWith("/") ? "" : "/") + System.currentTimeMillis() + "_" + testType + "_" + test + "/";
 
             String yamlConf = sparkTest.toYaml();
             String yamlPath = baseTestOutputDir + "testConfig.yml";
