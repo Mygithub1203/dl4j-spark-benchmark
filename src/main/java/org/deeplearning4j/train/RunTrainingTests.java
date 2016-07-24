@@ -77,8 +77,8 @@ public class RunTrainingTests {
     @Parameter(names = "-repartition", description = "When repartitioning should occur", converter = EnumConverters.RepartitionEnumConverter.class)
     protected Repartition repartition = Repartition.Always;
 
-    @Parameter(names = "-repartitionStrategy", description = "Repartition strategy to use when repartitioning", converter = EnumConverters.RepartitionStrategyEnumConverter.class)
-    protected RepartitionStrategy repartitionStrategy = RepartitionStrategy.SparkDefault;
+    @Parameter(names = "-repartitionStrategy", description = "Repartition strategies to use when repartitioning, as list (options: Balanced, SparkDefault)", converter = EnumConverters.RepartitionStrategyEnumConverter.class, variableArity = true)
+    protected List<RepartitionStrategy> repartitionStrategy = Arrays.asList(RepartitionStrategy.Balanced);
 
     @Parameter(names = "-workerPrefetchNumBatches", description = "Number of batches to prefetch")
     protected int workerPrefetchNumBatches = 0;
@@ -124,8 +124,8 @@ public class RunTrainingTests {
         lp.append(String.format(f,"resultPath",resultPath));
         lp.append(String.format(f,"skipExisting",skipExisting));
         lp.append(String.format(f,"numParams",numParams));
-        lp.append(String.format(f,"dataSize",dataSize));
-        lp.append(String.format(f,"cnnImageSize",cnnImageWidth));
+        if(TestType.valueOf(testType) != TestType.CNN) lp.append(String.format(f,"dataSize",dataSize));
+        else lp.append(String.format(f,"cnnImageSize",cnnImageWidth));
         lp.append(String.format(f,"miniBatchSizePerWorker",miniBatchSizePerWorker));
         lp.append(String.format(f,"saveUpdater",saveUpdater));
         lp.append(String.format(f,"repartition",repartition));
@@ -149,39 +149,41 @@ public class RunTrainingTests {
             for (Integer ds : dataSize) {
                 for (Integer mbs : miniBatchSizePerWorker) {
                     for (String dataLoadingMethod : dataLoadingMethods) {
+                        for(RepartitionStrategy rs : repartitionStrategy ) {
 
-                        switch(TestType.valueOf(testType)){
-                            case MLP:
-                                testsToRun.add(
-                                        new MLPTest.Builder()
-                                                .paramsSize(np)
-                                                .dataSize(ds)
-                                                .dataLoadingMethod(DataLoadingMethod.valueOf(dataLoadingMethod))
-                                                .minibatchSizePerWorker(mbs)
-                                                .saveUpdater(saveUpdater)
-                                                .repartition(repartition)
-                                                .repartitionStrategy(repartitionStrategy)
-                                                .workerPrefetchNumBatches(workerPrefetchNumBatches)
-                                                .build());
-                                break;
-                            case RNN:
-                                testsToRun.add(
-                                        new RNNTest.Builder()
-                                                .paramsSize(np)
-                                                .dataSize(ds)
-                                                .dataLoadingMethod(DataLoadingMethod.valueOf(dataLoadingMethod))
-                                                .minibatchSizePerWorker(mbs)
-                                                .saveUpdater(saveUpdater)
-                                                .repartition(repartition)
-                                                .repartitionStrategy(repartitionStrategy)
-                                                .workerPrefetchNumBatches(workerPrefetchNumBatches)
-                                                .timeSeriesLength(rnnTimeSeriesLength)
-                                                .build());
-                                break;
-                            case CNN:
-                                throw new UnsupportedOperationException("CNN tests not yet implemented");
-                            default:
-                                throw new RuntimeException("Unknown test type: " + testType);
+                            switch (TestType.valueOf(testType)) {
+                                case MLP:
+                                    testsToRun.add(
+                                            new MLPTest.Builder()
+                                                    .paramsSize(np)
+                                                    .dataSize(ds)
+                                                    .dataLoadingMethod(DataLoadingMethod.valueOf(dataLoadingMethod))
+                                                    .minibatchSizePerWorker(mbs)
+                                                    .saveUpdater(saveUpdater)
+                                                    .repartition(repartition)
+                                                    .repartitionStrategy(rs)
+                                                    .workerPrefetchNumBatches(workerPrefetchNumBatches)
+                                                    .build());
+                                    break;
+                                case RNN:
+                                    testsToRun.add(
+                                            new RNNTest.Builder()
+                                                    .paramsSize(np)
+                                                    .dataSize(ds)
+                                                    .dataLoadingMethod(DataLoadingMethod.valueOf(dataLoadingMethod))
+                                                    .minibatchSizePerWorker(mbs)
+                                                    .saveUpdater(saveUpdater)
+                                                    .repartition(repartition)
+                                                    .repartitionStrategy(rs)
+                                                    .workerPrefetchNumBatches(workerPrefetchNumBatches)
+                                                    .timeSeriesLength(rnnTimeSeriesLength)
+                                                    .build());
+                                    break;
+                                case CNN:
+                                    throw new UnsupportedOperationException("CNN tests not yet implemented");
+                                default:
+                                    throw new RuntimeException("Unknown test type: " + testType);
+                            }
                         }
                     }
                 }
@@ -211,8 +213,6 @@ public class RunTrainingTests {
                 fileSystem.delete(new Path(tempPath), true);
             }
 
-            //Step 0: export test
-
             //Step 1: generate data
             long startGenerateExport = System.currentTimeMillis();
             JavaRDD<DataSet> trainData = null;
@@ -238,7 +238,8 @@ public class RunTrainingTests {
             //Step 2: Train network for 1 epoch
             MultiLayerConfiguration netConf = sparkTest.getConfiguration();
 
-            TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(sparkTest.getDataSize())
+            TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(sparkTest.getMinibatchSizePerWorker())
+                    .batchSizePerWorker(sparkTest.getMinibatchSizePerWorker())
                     .saveUpdater(sparkTest.isSaveUpdater())
                     .repartionData(sparkTest.getRepartition())
                     .repartitionStrategy(sparkTest.getRepartitionStrategy())
@@ -275,9 +276,17 @@ public class RunTrainingTests {
             sb.append("Data generate/export time: ").append(endGenerateExport - startGenerateExport).append("\n");
             sb.append("Fit time: ").append(endFit - startFit).append("\n");
             sb.append("Spark default parallelism: ").append(sc.defaultParallelism()).append("\n");
-            String times = sb.toString();
-            String timesOutputPath = baseTestOutputDir + "times.txt";
-            SparkUtils.writeStringToFile(timesOutputPath, times, sc);
+            sb.append("Actual # parameters: ").append(sparkTest.getNumParams()).append("\n");
+            DataSet dsTemp = sparkTest.getSyntheticDataSet();
+            int dataSetSizeNumElements = dsTemp.getFeatureMatrix().length() + dsTemp.getLabels().length();
+            if(dsTemp.getFeaturesMaskArray() != null) dataSetSizeNumElements += dsTemp.getFeaturesMaskArray().length();
+            if(dsTemp.getLabelsMaskArray() != null) dataSetSizeNumElements += dsTemp.getLabelsMaskArray().length();
+            sb.append("Number values per DataSet object: ").append(dataSetSizeNumElements).append("\n");
+            double sizeMB = 4 * dataSetSizeNumElements / (1024.0 * 1024.0); //Float: 4 bytes per element
+            sb.append("DataSet data size (MB): ").append(String.format("%.3f",sizeMB)).append("\n");
+            String testStats = sb.toString();
+            String timesOutputPath = baseTestOutputDir + "testStats.txt";
+            SparkUtils.writeStringToFile(timesOutputPath, testStats, sc);
 
 
             String statsHtmlOutputPath = baseTestOutputDir + "SparkStats.html";
@@ -296,7 +305,7 @@ public class RunTrainingTests {
             }
 
             test++;
-            log.info("Completed test {} of {}. Total test time: {} ms", test, testsToRun.size(), (testStartTime-System.currentTimeMillis()));
+            log.info("Completed test {} of {}. Total test time: {} ms", test, testsToRun.size(), (System.currentTimeMillis()-testStartTime));
         }
 
 
