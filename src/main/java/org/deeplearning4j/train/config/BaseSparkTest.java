@@ -50,7 +50,9 @@ public abstract class BaseSparkTest implements SparkTest {
 
     @Override
     public int getNumParams(){
-        return new MultiLayerNetwork(getConfiguration()).numParams();
+        MultiLayerNetwork net = new MultiLayerNetwork(getConfiguration());
+        net.init();
+        return net.numParams();
     }
 
     @Override
