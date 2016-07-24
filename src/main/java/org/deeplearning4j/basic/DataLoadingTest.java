@@ -167,11 +167,11 @@ public class DataLoadingTest {
         sb.append("-numTestFiles = ").append(numTestFiles).append("\n");
         sb.append("-tempPath = ").append(tempPath).append("\n");
         sb.append("-resultPath = ").append(resultPath).append("\n");
-        sb.append("Default parallelism: ").append(sc.defaultParallelism());
+        sb.append("Default parallelism: ").append(sc.defaultParallelism()).append("\n");
         sb.append("Parallelize time: ").append(endParallelize-startParallelize).append("\n");
-        sb.append("Count + create DataSet times: ").append(endCount - startCount).append("\n");
+        sb.append("Count + create data times: ").append(endCount - startCount).append("\n");
         sb.append("Export time: ").append(endExport - startExport).append("\n");
-        sb.append("PDS initial number of partitions: ").append(pdsNPartitions);
+        sb.append("PDS initial number of partitions: ").append(pdsNPartitions).append("\n");
         sb.append("PDS count 1: ").append(endCountPDS-startCountPDS).append("\n");
         sb.append("PDS count (w/ coalesce): ").append(endCountPDS2-startCountPDS2).append("\n");
         sb.append("PDS count (w/ repartition): ").append(endCountPDS3-startCountPDS3).append("\n");
