@@ -6,7 +6,9 @@ import com.beust.jcommander.ParameterException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -45,7 +47,7 @@ public class RunTrainingTests {
     protected String testType = TestType.MLP.name();
 
     @Parameter(names = "-dataLoadingMethods", description = "List of data loading methods to test", variableArity = true)
-    protected List<String> dataLoadingMethods = new ArrayList<>(Arrays.asList(DataLoadingMethod.SparkBinaryFiles.name(), DataLoadingMethod.Parallelize.name()));
+    protected List<String> dataLoadingMethods = new ArrayList<>(Arrays.asList(DataLoadingMethod.SparkBinaryFiles.name(), DataLoadingMethod.Parallelize.name(), DataLoadingMethod.StringPath.name()));
 
     @Parameter(names = "-numTestFiles", description = "Number of test files (DataSet objects)")
     protected int numTestFiles = 2000;
@@ -216,6 +218,7 @@ public class RunTrainingTests {
             //Step 1: generate data
             long startGenerateExport = System.currentTimeMillis();
             JavaRDD<DataSet> trainData = null;
+            JavaRDD<String> stringPaths = null;
             switch (sparkTest.getDataLoadingMethod()) {
                 case SparkBinaryFiles:
                     log.info("Generating/exporting data at directory: {}", dataDir);
@@ -229,6 +232,25 @@ public class RunTrainingTests {
                     }
                     trainData = sc.parallelize(tempList);
                     trainData.cache();
+                    break;
+                case StringPath:
+                    log.info("Generating/exporting data at directory: {}", dataDir);
+                    JavaRDD<DataSet> data2 = intRDD.map(new GenerateDataFunction(sparkTest));
+                    data2.foreachPartition(new DataSetExportFunction(new URI(dataDir)));
+
+                    FileSystem hdfs = FileSystem.get(URI.create(tempPath), config);
+
+                    RemoteIterator<LocatedFileStatus> fileIter = hdfs.listFiles(new org.apache.hadoop.fs.Path(dataDir), false);
+
+                    List<String> paths = new ArrayList<>();
+                    while(fileIter.hasNext()){
+                        String path = fileIter.next().getPath().toString();
+                        paths.add(path);
+                    }
+
+                    stringPaths = sc.parallelize(paths);
+                    stringPaths.cache();
+
                     break;
             }
 
@@ -256,6 +278,9 @@ public class RunTrainingTests {
                     break;
                 case Parallelize:
                     net.fit(trainData);
+                    break;
+                case StringPath:
+                    net.fitPaths(stringPaths);
                     break;
             }
             long endFit = System.currentTimeMillis();

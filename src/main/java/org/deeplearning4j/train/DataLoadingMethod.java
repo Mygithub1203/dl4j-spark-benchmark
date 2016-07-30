@@ -6,6 +6,7 @@ package org.deeplearning4j.train;
 public enum DataLoadingMethod {
 
     SparkBinaryFiles,
-    Parallelize
+    Parallelize,
+    StringPath
 
 }
