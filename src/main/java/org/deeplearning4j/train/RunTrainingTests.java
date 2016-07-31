@@ -12,12 +12,17 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
+import org.datavec.api.writable.Writable;
+import org.datavec.spark.transform.misc.StringToWritablesFunction;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.spark.api.Repartition;
 import org.deeplearning4j.spark.api.RepartitionStrategy;
 import org.deeplearning4j.spark.api.TrainingMaster;
 import org.deeplearning4j.spark.api.stats.SparkTrainingStats;
 import org.deeplearning4j.spark.data.DataSetExportFunction;
+import org.deeplearning4j.spark.datavec.DataVecDataSetFunction;
+import org.deeplearning4j.spark.datavec.RecordReaderFunction;
 import org.deeplearning4j.spark.impl.multilayer.SparkDl4jMultiLayer;
 import org.deeplearning4j.spark.impl.paramavg.ParameterAveragingTrainingMaster;
 import org.deeplearning4j.spark.stats.StatsUtils;
@@ -25,6 +30,7 @@ import org.deeplearning4j.spark.util.SparkUtils;
 import org.deeplearning4j.train.config.MLPTest;
 import org.deeplearning4j.train.config.RNNTest;
 import org.deeplearning4j.train.config.SparkTest;
+import org.deeplearning4j.train.functions.GenerateCsvDataFunction;
 import org.deeplearning4j.train.functions.GenerateDataFunction;
 import org.deeplearning4j.train.misc.EnumConverters;
 import org.nd4j.linalg.dataset.DataSet;
@@ -261,6 +267,26 @@ public class RunTrainingTests {
                     stringPaths.cache();
 
                     break;
+                case CSV:
+                    log.info("Generating/exporting CSV test data at directory: {}", dataDir);
+                    //Generate some CSV data. Dimensions:
+                    //Number of lines/examples: number of DataSet objects * minibatch size
+                    //Number of values in each: 2*dataSize (in this test: input/output is the same size)
+                    int numLines = numDSObjects * sparkTest.getMinibatchSizePerWorker();
+                    int valuesPerLine = 2 * sparkTest.getDataSize();
+                    intList = new ArrayList<>();
+                    for(int i=0; i<numLines; i++ ){
+                        intList.add(i);
+                    }
+
+                    intRDD = sc.parallelize(intList);
+                    JavaRDD<String> csvData = intRDD.map(new GenerateCsvDataFunction(valuesPerLine));
+                    csvData.coalesce(sc.defaultParallelism());
+                    csvData.saveAsTextFile(dataDir);
+
+                    break;
+                default:
+                    throw new RuntimeException("Unknown data loading method: " + sparkTest.getDataLoadingMethod());
             }
 
             long endGenerateExport = System.currentTimeMillis();
@@ -269,7 +295,8 @@ public class RunTrainingTests {
             //Step 2: Train network for 1 epoch
             MultiLayerConfiguration netConf = sparkTest.getConfiguration();
 
-            TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(sparkTest.getMinibatchSizePerWorker())
+            int dataSetObjectSize = (sparkTest.getDataLoadingMethod() == DataLoadingMethod.CSV ? 1 : sparkTest.getMinibatchSizePerWorker());
+            TrainingMaster tm = new ParameterAveragingTrainingMaster.Builder(dataSetObjectSize)
                     .batchSizePerWorker(sparkTest.getMinibatchSizePerWorker())
                     .saveUpdater(sparkTest.isSaveUpdater())
                     .repartionData(sparkTest.getRepartition())
@@ -291,6 +318,17 @@ public class RunTrainingTests {
                 case StringPath:
                     net.fitPaths(stringPaths);
                     break;
+                case CSV:
+                    JavaRDD<String> rawLines = sc.textFile(dataDir, sc.defaultParallelism());
+                    JavaRDD<List<Writable>> writables = rawLines.map(new StringToWritablesFunction(new CSVRecordReader(0,",")));
+
+                    int featuresSize = sparkTest.getDataSize();
+                    JavaRDD<DataSet> sizeOneDataSets = writables.map(new DataVecDataSetFunction(featuresSize,2*featuresSize-1,-1, true, null, null));
+
+                    net.fit(sizeOneDataSets);
+                    break;
+                default:
+                    throw new RuntimeException("Unknown data loading method: " + sparkTest.getDataLoadingMethod());
             }
             long endFit = System.currentTimeMillis();
 
