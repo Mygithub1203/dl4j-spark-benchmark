@@ -55,7 +55,7 @@ public class RunTrainingTests {
     @Parameter(names = "-dataLoadingMethods", description = "List of data loading methods to test", variableArity = true)
     protected List<String> dataLoadingMethods = new ArrayList<>(Arrays.asList(DataLoadingMethod.SparkBinaryFiles.name(), DataLoadingMethod.Parallelize.name(), DataLoadingMethod.StringPath.name()));
 
-    @Parameter(names = "-numDataSetObjects", description = "Number of test files (DataSet objects of size miniBatchSizePerWorker) - as list")
+    @Parameter(names = "-numDataSetObjects", description = "Number of test files (DataSet objects of size miniBatchSizePerWorker) - as list", variableArity = true)
     protected List<Integer> numDataSetObjects = new ArrayList<>(Arrays.asList(2000));
 
     @Parameter(names = "-tempPath", description = "Path to the test directory (typically HDFS), in which to generate data", required = true)
