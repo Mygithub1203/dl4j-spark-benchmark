@@ -23,6 +23,8 @@ public interface SparkTest extends Serializable {
 
     MultiLayerConfiguration getConfiguration();
 
+    int getNumDataSetObjects();
+
     int getNumParams();
 
     DataSet getSyntheticDataSet();

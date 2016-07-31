@@ -33,7 +33,7 @@ public class DataLoadingTest {
     @Parameter(names = "-useSparkLocal", description = "Whether to use spark local (if false: use spark submit)", arity = 1)
     protected boolean useSparkLocal = false;
 
-    @Parameter(names="-numTestFiles", description = "Number of test files (DataSet objects)")
+    @Parameter(names="-numDataSetObjects", description = "Number of test files (DataSet objects)")
     protected int numTestFiles = 10000;
 
     @Parameter(names="-tempPath", description = "Path to the test directory (typically HDFS), in which to generate data", required = true)
@@ -68,7 +68,7 @@ public class DataLoadingTest {
         lp.append("Launching job with args:\n");
         lp.append(String.format(f,"launchArgsPath",launchArgsPath));
         lp.append(String.format(f,"useSparkLocal",useSparkLocal));
-        lp.append(String.format(f,"numTestFiles",numTestFiles));
+        lp.append(String.format(f,"numDataSetObjects",numTestFiles));
         lp.append(String.format(f,"tempPath",tempPath));
         lp.append(String.format(f,"resultPath",resultPath));
         log.info(lp.toString());
@@ -164,7 +164,7 @@ public class DataLoadingTest {
         long endProcessList = System.currentTimeMillis();
 
         StringBuilder sb = new StringBuilder();
-        sb.append("-numTestFiles = ").append(numTestFiles).append("\n");
+        sb.append("-numDataSetObjects = ").append(numTestFiles).append("\n");
         sb.append("-tempPath = ").append(tempPath).append("\n");
         sb.append("-resultPath = ").append(resultPath).append("\n");
         sb.append("Default parallelism: ").append(sc.defaultParallelism()).append("\n");

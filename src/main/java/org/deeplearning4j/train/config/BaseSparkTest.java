@@ -25,6 +25,7 @@ import java.util.Random;
 public abstract class BaseSparkTest implements SparkTest {
 
     protected int minibatchSizePerWorker;
+    protected int numDataSetObjects;
     protected int dataSize;
     protected int paramsSize;
     protected Random rng = new Random();
@@ -37,6 +38,7 @@ public abstract class BaseSparkTest implements SparkTest {
 
 
     protected BaseSparkTest(Builder builder){
+        this.numDataSetObjects = builder.numDataSetObjects;
         this.minibatchSizePerWorker = builder.minibatchSizePerWorker;
         this.dataSize = builder.dataSize;
         this.paramsSize = builder.paramsSize;
@@ -88,6 +90,7 @@ public abstract class BaseSparkTest implements SparkTest {
     @SuppressWarnings("unchecked")
     public static abstract class Builder<T extends Builder<T>>{
 
+        protected int numDataSetObjects = 2000;
         protected int minibatchSizePerWorker = 32;
         protected int dataSize = 128;
         protected int paramsSize = 100_000;
@@ -101,6 +104,10 @@ public abstract class BaseSparkTest implements SparkTest {
 
         protected Random rng = new Random();
 
+        public T numDataSetObjects(int numDataSetObjects){
+            this.numDataSetObjects = numDataSetObjects;
+            return (T)this;
+        }
 
         public T minibatchSizePerWorker(int minibatchSizePerWorker){
             this.minibatchSizePerWorker = minibatchSizePerWorker;
