@@ -8,5 +8,6 @@ public enum DataLoadingMethod {
     SparkBinaryFiles,
     Parallelize,
     StringPath,
-    CSV
+    CSV,
+    SequenceFile
 }

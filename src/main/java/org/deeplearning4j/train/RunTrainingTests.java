@@ -9,7 +9,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.SequenceFileOutputFormat;
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.datavec.api.records.reader.impl.csv.CSVRecordReader;
@@ -32,6 +36,8 @@ import org.deeplearning4j.train.config.RNNTest;
 import org.deeplearning4j.train.config.SparkTest;
 import org.deeplearning4j.train.functions.GenerateCsvDataFunction;
 import org.deeplearning4j.train.functions.GenerateDataFunction;
+import org.deeplearning4j.train.functions.sequence.FromSequenceFilePairFunction;
+import org.deeplearning4j.train.functions.sequence.ToSequenceFilePairFunction;
 import org.deeplearning4j.train.misc.EnumConverters;
 import org.nd4j.linalg.dataset.DataSet;
 
@@ -285,6 +291,18 @@ public class RunTrainingTests {
                     csvData.saveAsTextFile(dataDir);
 
                     break;
+                case SequenceFile:
+                    log.info("Generating SequenceFile for Data at directory: {}", dataDir);
+
+                    //Need: DataSet as a sequence file
+                    JavaRDD<DataSet> data3 = intRDD.map(new GenerateDataFunction(sparkTest));
+                    JavaPairRDD<Text,BytesWritable> pairRDD = data3.mapToPair(new ToSequenceFilePairFunction());
+                    pairRDD.saveAsHadoopFile(dataDir, Text.class, BytesWritable.class, SequenceFileOutputFormat.class);
+
+                    JavaPairRDD<Text,BytesWritable> sequenceFile = sc.sequenceFile(dataDir, Text.class, BytesWritable.class);
+                    trainData = sequenceFile.map(new FromSequenceFilePairFunction());
+
+                    break;
                 default:
                     throw new RuntimeException("Unknown data loading method: " + sparkTest.getDataLoadingMethod());
             }
@@ -326,6 +344,9 @@ public class RunTrainingTests {
                     JavaRDD<DataSet> sizeOneDataSets = writables.map(new DataVecDataSetFunction(featuresSize,2*featuresSize-1,-1, true, null, null));
 
                     net.fit(sizeOneDataSets);
+                    break;
+                case SequenceFile:
+                    net.fit(trainData);
                     break;
                 default:
                     throw new RuntimeException("Unknown data loading method: " + sparkTest.getDataLoadingMethod());
