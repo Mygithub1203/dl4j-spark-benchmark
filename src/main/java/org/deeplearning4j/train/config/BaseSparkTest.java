@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.datatype.joda.JodaModule;
 import lombok.Data;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.spark.api.Repartition;
@@ -77,7 +76,6 @@ public abstract class BaseSparkTest implements SparkTest {
 
     protected ObjectMapper getObjectMapper(JsonFactory factory) {
         ObjectMapper om = new ObjectMapper(factory);
-        om.registerModule(new JodaModule());
         om.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         om.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         om.enable(SerializationFeature.INDENT_OUTPUT);

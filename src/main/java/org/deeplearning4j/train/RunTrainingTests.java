@@ -25,12 +25,11 @@ import org.deeplearning4j.spark.api.RepartitionStrategy;
 import org.deeplearning4j.spark.api.TrainingMaster;
 import org.deeplearning4j.spark.api.stats.SparkTrainingStats;
 import org.deeplearning4j.spark.data.DataSetExportFunction;
-import org.deeplearning4j.spark.datavec.DataVecDataSetFunction;
-import org.deeplearning4j.spark.datavec.RecordReaderFunction;
 import org.deeplearning4j.spark.impl.multilayer.SparkDl4jMultiLayer;
 import org.deeplearning4j.spark.impl.paramavg.ParameterAveragingTrainingMaster;
 import org.deeplearning4j.spark.stats.StatsUtils;
 import org.deeplearning4j.spark.util.SparkUtils;
+import org.deeplearning4j.temp.DataVecDataSetFunction;
 import org.deeplearning4j.train.config.MLPTest;
 import org.deeplearning4j.train.config.RNNTest;
 import org.deeplearning4j.train.config.SparkTest;
@@ -255,24 +254,25 @@ public class RunTrainingTests {
                     trainData.cache();
                     break;
                 case StringPath:
-                    log.info("Generating/exporting data at directory: {}", dataDir);
-                    JavaRDD<DataSet> data2 = intRDD.map(new GenerateDataFunction(sparkTest));
-                    data2.foreachPartition(new DataSetExportFunction(new URI(dataDir)));
-
-                    FileSystem hdfs = FileSystem.get(URI.create(tempPath), config);
-
-                    RemoteIterator<LocatedFileStatus> fileIter = hdfs.listFiles(new org.apache.hadoop.fs.Path(dataDir), false);
-
-                    List<String> paths = new ArrayList<>();
-                    while(fileIter.hasNext()){
-                        String path = fileIter.next().getPath().toString();
-                        paths.add(path);
-                    }
-
-                    stringPaths = sc.parallelize(paths);
-                    stringPaths.cache();
-
-                    break;
+                    throw new UnsupportedOperationException("StringPaths not supported in 0.4.0");
+//                    log.info("Generating/exporting data at directory: {}", dataDir);
+//                    JavaRDD<DataSet> data2 = intRDD.map(new GenerateDataFunction(sparkTest));
+//                    data2.foreachPartition(new DataSetExportFunction(new URI(dataDir)));
+//
+//                    FileSystem hdfs = FileSystem.get(URI.create(tempPath), config);
+//
+//                    RemoteIterator<LocatedFileStatus> fileIter = hdfs.listFiles(new org.apache.hadoop.fs.Path(dataDir), false);
+//
+//                    List<String> paths = new ArrayList<>();
+//                    while(fileIter.hasNext()){
+//                        String path = fileIter.next().getPath().toString();
+//                        paths.add(path);
+//                    }
+//
+//                    stringPaths = sc.parallelize(paths);
+//                    stringPaths.cache();
+//
+//                    break;
                 case CSV:
                     log.info("Generating/exporting CSV test data at directory: {}", dataDir);
                     //Generate some CSV data. Dimensions:
@@ -334,8 +334,9 @@ public class RunTrainingTests {
                     net.fit(trainData);
                     break;
                 case StringPath:
-                    net.fitPaths(stringPaths);
-                    break;
+                    throw new UnsupportedOperationException("StringPaths not supported in 0.4.0");
+//                    net.fitPaths(stringPaths);
+//                    break;
                 case CSV:
                     JavaRDD<String> rawLines = sc.textFile(dataDir, sc.defaultParallelism());
                     JavaRDD<List<Writable>> writables = rawLines.map(new StringToWritablesFunction(new CSVRecordReader(0,",")));
